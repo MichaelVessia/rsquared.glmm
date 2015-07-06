@@ -5,7 +5,7 @@
 #'
 #' @param a single model or a list of fitted (generalized) linear (mixed) model objects
 #' @return a dataframe with one row per model, and "Class",
-#'         "Family", "Marginal", "Conditional" and "AIC" columns
+#'         "Family", "Marginal", "Conditional", "AIC" and "BIC" columns
 rsquared.glmm <- function(modlist) {
 				if( class(modlist) != "list" ) modlist = list(modlist) else modlist
 				# Iterate over each model in the list
@@ -22,7 +22,7 @@ rsquared.glmm <- function(modlist) {
 #'
 #' @param mdl a fitted (generalized) linear (mixed) model object
 #' @return Implementing methods usually return a dataframe with "Class",
-#'         "Family", "Marginal", "Conditional", and "AIC" columns
+#'         "Family", "Marginal", "Conditional", "AIC" and  "BIC" columns
 r.squared <- function(mdl){
 				UseMethod("r.squared")
 }
@@ -35,11 +35,11 @@ r.squared <- function(mdl){
 #'
 #' @param mdl an lm object (usually fit using \code{\link{lm}},
 #' @return a dataframe with with "Class" = "lm", "Family" = "gaussian",
-#'        "Marginal" = unadjusted r-squared, "Conditional" = NA, and "AIC" columns
+#'        "Marginal" = unadjusted r-squared, "Conditional" = NA, "AIC" and "BIC" columns
 r.squared.lm <- function(mdl){
 				data.frame(Class=class(mdl), Family="gaussian", Link="identity",
 									 Marginal=summary(mdl)$r.squared,
-									 Conditional=NA, AIC=AIC(mdl))
+									 Conditional=NA, AIC=AIC(mdl), BIC=BIC(mdl))
 }
 
 #' Marginal and conditional r-squared for merMod objects
@@ -71,6 +71,8 @@ r.squared.merMod <- function(mdl){
 								VarResid <- attr(lme4::VarCorr(mdl), "sc")^2
 								# Get ML model AIC
 								mdl.aic <- AIC(update(mdl, REML=F))
+                # Get ML model BIC
+								mdl.bic <- BIC(update(mdl, REML=F))
 								# Model family for lmer is gaussian
 								family <- "gaussian"
 								# Model link for lmer is identity
@@ -79,10 +81,11 @@ r.squared.merMod <- function(mdl){
 				else if(inherits(mdl, "glmerMod")){
 								# Get the model summary
 								mdl.summ <- summary(mdl)
-								# Get the model's family, link and AIC
+								# Get the model's family, link and AIC and BIC
 								family <- mdl.summ$family
 								link <- mdl.summ$link
 								mdl.aic <- AIC(mdl)
+								mdl.bic <- BIC(mdl)
 								# Pseudo-r-squared for poisson also requires the fixed effects of the null model
 								if(family=="poisson") {
 												# Get random effects names to generate null model
@@ -108,6 +111,7 @@ r.squared.merMod <- function(mdl){
 				# Call the internal function to do the pseudo r-squared calculations
 				.rsquared.glmm(VarF, VarRand, VarResid, VarDisp, family = family, link = link,
 											 mdl.aic = mdl.aic,
+                       mdl.bic = mdl.bic,
 											 mdl.class = class(mdl),
 											 null.fixef = null.fixef)
 }
@@ -145,6 +149,7 @@ r.squared.lme <- function(mdl){
 				# Call the internal function to do the pseudo r-squared calculations
 				.rsquared.glmm(VarF, VarRand, VarResid, VarDisp, family = "gaussian", link = "identity",
 											 mdl.aic = AIC(update(mdl, method="ML")),
+                       mdl.bic = BIC(update(mdl, method="ML")),
 											 mdl.class = class(mdl))
 }
 
@@ -162,12 +167,13 @@ r.squared.lme <- function(mdl){
 #' @param link model link function. Working links are: gaussian: "identity" (default);
 #'        binomial: "logit" (default), "probit"; poisson: "log" (default), "sqrt"
 #' @param mdl.aic The model's AIC
+#' @param mdl.bic The model's BIC
 #' @param mdl.class The name of the model's class
 #' @param null.fixef Numeric vector containing the fixed effects of the null model.
 #'        Only necessary for "poisson" family
-#' @return A data frame with "Class", "Family", "Marginal", "Conditional", and "AIC" columns
+#' @return A data frame with "Class", "Family", "Marginal", "Conditional", "AIC", and "BIC" columns
 .rsquared.glmm <- function(varF, varRand, varResid = NULL, varDisp = NULL, family, link,
-													 mdl.aic, mdl.class, null.fixef = NULL){
+													 mdl.aic, mdl.bic, mdl.class, null.fixef = NULL){
 				if(family == "gaussian"){
 								# Only works with identity link
 								if(link != "identity")
@@ -218,9 +224,9 @@ r.squared.lme <- function(mdl){
 
 				else
 								family_link.stop(family, link)
-								# Bind R^2s into a matrix and return with AIC values
+								# Bind R^2s into a matrix and return with AIC and BIC values
 								data.frame(Class=mdl.class, Family = family, Link = link,
-													 Marginal=Rm, Conditional=Rc, AIC=mdl.aic)
+													 Marginal=Rm, Conditional=Rc, AIC=mdl.aic, BIC=mdl.bic)
 }
 
 #' stop execution if unable to calculate variance for a given family and link
