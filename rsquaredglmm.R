@@ -156,7 +156,7 @@ r.squared.lme <- function(mdl){
 #' Marginal and conditional r-squared for glmm given fixed and random variances
 #'
 #' This function is based on Nakagawa and Schielzeth (2013). It returns the marginal
-#' and conditional r-squared, as well as the AIC for each glmm.
+#' and conditional r-squared, as well as the AIC and BIC for each glmm.
 #' Users should call the higher-level generic "r.squared", or implement a method for the
 #' corresponding class to get varF, varRand and the family from the specific object
 #'
@@ -193,6 +193,7 @@ r.squared.lme <- function(mdl){
 												family_link.stop(family, link)
 								# Calculate marginal R-squared
 								Rm <- varF/(varF+varRand+varDist+varDisp)
+                
 								# Calculate conditional R-squared (fixed effects+random effects/total variance)
 								Rc <- (varF+varRand)/(varF+varRand+varDist+varDisp)
 				}
@@ -233,4 +234,58 @@ r.squared.lme <- function(mdl){
 family_link.stop <- function(family, link){
 				stop(paste("Don't know how to calculate variance for",
 									 family, "family and", link, "link."))
+}
+
+
+negative.binomial <- function (link = "log") 
+{
+  linktemp <- substitute(link)
+  if (!is.character(linktemp)) 
+    linktemp <- deparse(linktemp)
+  okLinks <- c("log", "identity", "sqrt")
+  if (linktemp %in% okLinks) 
+    stats <- make.link(linktemp)
+  else if (is.character(link)) {
+    stats <- make.link(link)
+    linktemp <- link
+  }
+  else {
+    if (inherits(link, "link-glm")) {
+      stats <- link
+      if (!is.null(stats$name)) 
+        linktemp <- stats$name
+    }
+    else {
+      stop(gettextf("link \"%s\" not available for negative binomial family; available links are %s", 
+                    linktemp, paste(sQuote(okLinks), collapse = ", ")), 
+           domain = NA)
+    }
+  }
+  variance <- function(mu) mu
+  validmu <- function(mu) all(mu > 0)
+  dev.resids <- function(y, mu, wt) {
+    r <- mu * wt
+    p <- which(y > 0)
+    r[p] <- (wt * (y * log(y/mu) - (y - mu)))[p]
+    2 * r
+  }
+  aic <- function(y, n, mu, wt, dev) -2 * sum(dpois(y, mu, 
+                                                    log = TRUE) * wt)
+  initialize <- expression({
+    if (any(y < 0)) stop("negative values not allowed for the 'negative binomial' family")
+    n <- rep.int(1, nobs)
+    mustart <- y + 0.1
+  })
+  simfun <- function(object, nsim) {
+    wts <- object$prior.weights
+    if (any(wts != 1)) 
+      warning("ignoring prior weights")
+    ftd <- fitted(object)
+    rpois(nsim * length(ftd), ftd)
+  }
+  structure(list(family = "negative binomial", link = linktemp, linkfun = stats$linkfun, 
+                 linkinv = stats$linkinv, variance = variance, dev.resids = dev.resids, 
+                 aic = aic, mu.eta = stats$mu.eta, initialize = initialize, 
+                 validmu = validmu, valideta = stats$valideta, simulate = simfun), 
+            class = "family")
 }
