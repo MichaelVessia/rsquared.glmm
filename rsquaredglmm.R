@@ -71,7 +71,7 @@ r.squared.merMod <- function(mdl){
 								VarResid <- attr(lme4::VarCorr(mdl), "sc")^2
 								# Get ML model AIC
 								mdl.aic <- AIC(update(mdl, REML=F))
-                # Get ML model BIC
+								# Get ML model BIC
 								mdl.bic <- BIC(update(mdl, REML=F))
 								# Model family for lmer is gaussian
 								family <- "gaussian"
@@ -106,12 +106,13 @@ r.squared.merMod <- function(mdl){
 												null.mdl <- update(mdl, rand.formula)
 												# Get the fixed effects of the null model
 												null.fixef <- as.numeric(lme4::fixef(null.mdl))
+
 								}
 				}
 				# Call the internal function to do the pseudo r-squared calculations
 				.rsquared.glmm(VarF, VarRand, VarResid, VarDisp, family = family, link = link,
 											 mdl.aic = mdl.aic,
-                       mdl.bic = mdl.bic,
+											 mdl.bic = mdl.bic,
 											 mdl.class = class(mdl),
 											 null.fixef = null.fixef)
 }
@@ -149,7 +150,7 @@ r.squared.lme <- function(mdl){
 				# Call the internal function to do the pseudo r-squared calculations
 				.rsquared.glmm(VarF, VarRand, VarResid, VarDisp, family = "gaussian", link = "identity",
 											 mdl.aic = AIC(update(mdl, method="ML")),
-                       mdl.bic = BIC(update(mdl, method="ML")),
+											 mdl.bic = BIC(update(mdl, method="ML")),
 											 mdl.class = class(mdl))
 }
 
@@ -171,7 +172,7 @@ r.squared.lme <- function(mdl){
 #' @param mdl.class The name of the model's class
 #' @param null.fixef Numeric vector containing the fixed effects of the null model.
 #'        Only necessary for "poisson" family
-#' @return A data frame with "Class", "Family", "Marginal", "Conditional", "AIC", and "BIC" columns
+#' @return A data frame with "Class", "Family", "Marginal", "Conditional", "AIC", and "BIC"
 .rsquared.glmm <- function(varF, varRand, varResid = NULL, varDisp = NULL, family, link,
 													 mdl.aic, mdl.bic, mdl.class, null.fixef = NULL){
 				if(family == "gaussian"){
@@ -193,7 +194,7 @@ r.squared.lme <- function(mdl){
 												family_link.stop(family, link)
 								# Calculate marginal R-squared
 								Rm <- varF/(varF+varRand+varDist+varDisp)
-                
+
 								# Calculate conditional R-squared (fixed effects+random effects/total variance)
 								Rc <- (varF+varRand)/(varF+varRand+varDist+varDisp)
 				}
@@ -237,55 +238,57 @@ family_link.stop <- function(family, link){
 }
 
 
+
+##The following is poisson code with the name changed.  Fix me!!
 negative.binomial <- function (link = "log") 
 {
-  linktemp <- substitute(link)
-  if (!is.character(linktemp)) 
-    linktemp <- deparse(linktemp)
-  okLinks <- c("log", "identity", "sqrt")
-  if (linktemp %in% okLinks) 
-    stats <- make.link(linktemp)
-  else if (is.character(link)) {
-    stats <- make.link(link)
-    linktemp <- link
-  }
-  else {
-    if (inherits(link, "link-glm")) {
-      stats <- link
-      if (!is.null(stats$name)) 
-        linktemp <- stats$name
-    }
-    else {
-      stop(gettextf("link \"%s\" not available for negative binomial family; available links are %s", 
-                    linktemp, paste(sQuote(okLinks), collapse = ", ")), 
-           domain = NA)
-    }
-  }
-  variance <- function(mu) mu
-  validmu <- function(mu) all(mu > 0)
-  dev.resids <- function(y, mu, wt) {
-    r <- mu * wt
-    p <- which(y > 0)
-    r[p] <- (wt * (y * log(y/mu) - (y - mu)))[p]
-    2 * r
-  }
-  aic <- function(y, n, mu, wt, dev) -2 * sum(dpois(y, mu, 
-                                                    log = TRUE) * wt)
-  initialize <- expression({
-    if (any(y < 0)) stop("negative values not allowed for the 'negative binomial' family")
-    n <- rep.int(1, nobs)
-    mustart <- y + 0.1
-  })
-  simfun <- function(object, nsim) {
-    wts <- object$prior.weights
-    if (any(wts != 1)) 
-      warning("ignoring prior weights")
-    ftd <- fitted(object)
-    rpois(nsim * length(ftd), ftd)
-  }
-  structure(list(family = "negative binomial", link = linktemp, linkfun = stats$linkfun, 
-                 linkinv = stats$linkinv, variance = variance, dev.resids = dev.resids, 
-                 aic = aic, mu.eta = stats$mu.eta, initialize = initialize, 
-                 validmu = validmu, valideta = stats$valideta, simulate = simfun), 
-            class = "family")
+				linktemp <- substitute(link)
+				if (!is.character(linktemp)) 
+								linktemp <- deparse(linktemp)
+				okLinks <- c("log", "identity", "sqrt")
+				if (linktemp %in% okLinks) 
+								stats <- make.link(linktemp)
+				else if (is.character(link)) {
+								stats <- make.link(link)
+								linktemp <- link
+				}
+				else {
+								if (inherits(link, "link-glm")) {
+												stats <- link
+												if (!is.null(stats$name)) 
+																linktemp <- stats$name
+								}
+								else {
+												stop(gettextf("link \"%s\" not available for negative binomial family; available links are %s", 
+																			linktemp, paste(sQuote(okLinks), collapse = ", ")), 
+														 domain = NA)
+								}
+				}
+				variance <- function(mu) mu
+				validmu <- function(mu) all(mu > 0)
+				dev.resids <- function(y, mu, wt) {
+								r <- mu * wt
+								p <- which(y > 0)
+								r[p] <- (wt * (y * log(y/mu) - (y - mu)))[p]
+								2 * r
+				}
+				aic <- function(y, n, mu, wt, dev) -2 * sum(dpois(y, mu, 
+																													log = TRUE) * wt)
+				initialize <- expression({
+								if (any(y < 0)) stop("negative values not allowed for the 'negative binomial' family")
+								n <- rep.int(1, nobs)
+								mustart <- y + 0.1
+				})
+				simfun <- function(object, nsim) {
+								wts <- object$prior.weights
+								if (any(wts != 1)) 
+												warning("ignoring prior weights")
+								ftd <- fitted(object)
+								rpois(nsim * length(ftd), ftd)
+				}
+				structure(list(family = "negative binomial", link = linktemp, linkfun = stats$linkfun, 
+											 linkinv = stats$linkinv, variance = variance, dev.resids = dev.resids, 
+											 aic = aic, mu.eta = stats$mu.eta, initialize = initialize, 
+											 validmu = validmu, valideta = stats$valideta, simulate = simfun), 
+									class = "family")
 }
