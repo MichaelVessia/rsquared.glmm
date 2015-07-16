@@ -2,8 +2,8 @@
 set.seed(4)
 data <- data.frame(y.nbinom=rnegbin(100,5,2))
 data <- cbind(data, 
-              data.frame(fixed1=data$y+c(runif(50, 0, 5),runif(50, 10, 50)),
-                         fixed2=c("Treatment1", "Treatment2"),
+              data.frame(fixed1=c(runif(50, 0, 5)),
+                         fixed2=c(runif(50, 10, 50)),
                          rand1=LETTERS[1:2],
                          rand2=rep(LETTERS[23:26],each=25)) )
 
