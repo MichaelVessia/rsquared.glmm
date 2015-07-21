@@ -238,7 +238,6 @@ family_link.stop <- function(family, link){
 }
 
 
-
 ##The following is poisson code with the name changed.  Fix me!!
 negative.binomial <- function (link = "log") 
 {
